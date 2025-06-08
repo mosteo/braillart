@@ -30,9 +30,9 @@ package Braillart with Preelaborate is
 
    --  Lines as a sequences of cells
 
-   type Matrix_Line is array (Positive range <>) of Cell_Matrix;
+   type Matrix_Array is array (Positive range <>) of Cell_Matrix;
 
-   function Cell_Line (M : Matrix_Line) return BString;
+   function Cell_Line (M : Matrix_Array) return BString;
 
    --  Lines as whole matrices
 
