@@ -1,5 +1,9 @@
 package body Braillart is
 
+   --------------------------
+   -- Get_Dot_Offset_Value --
+   --------------------------
+
    function Get_Dot_Offset_Value (R : Rows; C : Cols) return Natural is
       Bit_Offset : Natural;
    begin
@@ -30,15 +34,42 @@ package body Braillart is
       return 2**Bit_Offset;
    end Get_Dot_Offset_Value;
 
+   ---------
+   -- Dot --
+   ---------
+
    function Dot (R : Rows; C : Cols) return BChar is
       Code_Value : Natural;
-      Base_Braille_Code : constant Natural := 16#2800#;
       Dot_Pattern_Value : Natural;
    begin
       Dot_Pattern_Value := Get_Dot_Offset_Value(R, C);
-      Code_Value := Base_Braille_Code + Dot_Pattern_Value;
+      Code_Value := BChar'Pos (BChar'First) + Dot_Pattern_Value;
 
       return Wide_Wide_Character'Val(Code_Value);
    end Dot;
+
+   ----------
+   -- Cell --
+   ----------
+
+   function Cell (M : Cell_Matrix) return BChar is (raise Program_Error);
+
+   ---------------
+   -- Cell_Line --
+   ---------------
+
+   function Cell_Line (M : Matrix_Line) return BString is (raise Program_Error);
+
+   --------------
+   -- Panorama --
+   --------------
+
+   function Panorama (M : Line_Matrix) return BString is (raise Program_Error);
+
+   ------------
+   -- Canvas --
+   ------------
+
+   function Canvas (M : Full_Matrix) return Line_List is (raise Program_Error);
 
 end Braillart;

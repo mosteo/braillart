@@ -23,8 +23,6 @@ package Braillart with Preelaborate is
 
    type Cell_Matrix is array (Rows, Cols) of Boolean;
 
-   function Get_Dot_Offset_Value (R : Rows; C : Cols) return Natural; -- New function
-
    function Dot (R : Rows; C : Cols) return BChar;
 
    function Cell (M : Cell_Matrix) return BChar;
