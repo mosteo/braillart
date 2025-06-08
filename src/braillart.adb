@@ -1,9 +1,12 @@
 package body Braillart is
 
+   ---------
+   -- Dot --
+   ---------
+
    function Dot (R : Rows; C : Cols) return BChar is
       Bit_Offset : Natural;
       Code_Value : Natural;
-      Base_Braille_Code : constant Natural := 16#2800#;
    begin
       -- Determine Bit_Offset based on R and C
       -- (1,1) -> Bit 0
@@ -30,9 +33,9 @@ package body Braillart is
          end case;
       end if;
 
-      Code_Value := Base_Braille_Code + (2**Bit_Offset);
+      Code_Value := BChar'Pos (BChar'First) + (2**Bit_Offset);
 
-      return Wide_Wide_Character'Val(Code_Value);
+      return BChar'Val(Code_Value);
       -- BChar is a subtype of Wide_Wide_Character, so direct return should be fine
       -- as long as the value is within BChar's range, which it will be by construction.
    end Dot;
