@@ -1,0 +1,13 @@
+name = "braillart_tests"
+description = "Tests for the built-in Alire test runner"
+version = "0.0.0-test"
+
+[[depends-on]]
+braillart = "*"
+
+[[pins]]
+braillart = { path = ".." }
+
+[build-profiles]
+braillart       = "validation"
+braillart_tests = "validation"

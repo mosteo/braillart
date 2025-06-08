@@ -1,0 +1,13 @@
+name = "braillart"
+description = "Use Braille patterns as a dot-matrix printer"
+version = "0.1.0-dev"
+
+authors = ["Alejandro R. Mosteo"]
+maintainers = ["Alejandro R. Mosteo <alejandro@mosteo.com>"]
+maintainers-logins = ["mosteo"]
+licenses = "LGPL-3.0-or-later"
+website = ""
+tags = ["braille", "art", "ascii", "unicode"]
+
+[test]
+runner = "alire"
