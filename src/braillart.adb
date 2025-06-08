@@ -170,4 +170,26 @@ package body Braillart is
       return Result;
    end Canvas;
 
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Pos : BCount) return BChar is
+      use Interfaces;
+
+      -- Mapping from row-first bit position to Unicode bit position
+      -- Row-first: 0,1,2,3,4,5,6,7 -> Unicode: 0,1,2,6,3,4,5,7
+      Bit_Map : constant array (0 .. 7) of Natural := (0, 1, 2, 6, 3, 4, 5, 7);
+      Code_Value : Natural := 0;
+      Input_Bits : constant Unsigned_8 := Unsigned_8 (Pos);
+   begin
+      for I in Bit_Map'Range loop
+         if (Input_Bits and 2**I) /= 0 then
+            Code_Value := Code_Value + 2**Bit_Map(I);
+         end if;
+      end loop;
+
+      return BChar'Val (BChar'Pos (BChar'First) + Code_Value);
+   end Value;
+
 end Braillart;
