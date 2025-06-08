@@ -1,33 +1,29 @@
 with Braillart; use Braillart;
 
 procedure Braillart_Tests.Lines is
-   -- Test constants
-   T : constant Boolean := True;
-   F : constant Boolean := False;
-
    -- Empty matrix
    Empty_Matrix : constant Cell_Matrix := (others => (others => False));
 
    -- Matrix with only one dot at position (1,1)
    Matrix_1_1 : constant Cell_Matrix :=
-      (1 => (1 => T, 2 => F),
-       2 => (1 => F, 2 => F),
-       3 => (1 => F, 2 => F),
-       4 => (1 => F, 2 => F));
+      (1 => (1 => X, 2 => O),
+       2 => (1 => O, 2 => O),
+       3 => (1 => O, 2 => O),
+       4 => (1 => O, 2 => O));
 
    -- Matrix with dots at positions (1,1) and (2,2)
    Matrix_1_1_2_2 : constant Cell_Matrix :=
-      (1 => (1 => T, 2 => F),
-       2 => (1 => F, 2 => T),
-       3 => (1 => F, 2 => F),
-       4 => (1 => F, 2 => F));
+      (1 => (1 => X, 2 => O),
+       2 => (1 => O, 2 => X),
+       3 => (1 => O, 2 => O),
+       4 => (1 => O, 2 => O));
 
    -- Matrix with dots at positions (4,1) and (4,2) - fourth row test
    Matrix_4_1_4_2 : constant Cell_Matrix :=
-      (1 => (1 => F, 2 => F),
-       2 => (1 => F, 2 => F),
-       3 => (1 => F, 2 => F),
-       4 => (1 => T, 2 => T));
+      (1 => (1 => O, 2 => O),
+       2 => (1 => O, 2 => O),
+       3 => (1 => O, 2 => O),
+       4 => (1 => X, 2 => X));
 
    -- Matrix with all dots set
    Full_Matrix : constant Cell_Matrix := (others => (others => True));
