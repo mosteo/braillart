@@ -119,6 +119,55 @@ package body Braillart is
    -- Canvas --
    ------------
 
-   function Canvas (M : Full_Matrix) return Line_List is (raise Program_Error);
+   function Canvas (M : Full_Matrix) return Line_List is
+      Result : Line_List;
+      Cell_M : Cell_Matrix;
+   begin
+      -- Iterate over the matrix in 4-row chunks
+      for Row_Start in M'First (1) .. M'Last (1) loop
+         if (Row_Start - M'First (1)) mod 4 = 0 then
+            -- Starting a new line of cells
+            declare
+               Max_Cells : constant Natural := (M'Length (2) + 1) / 2;
+               Current_Line : BString (1 .. Max_Cells);
+               Cell_Count : Natural := 0;
+            begin
+               -- Iterate over columns in 2-column chunks to create cells
+               for Col_Start in M'First (2) .. M'Last (2) loop
+                  if (Col_Start - M'First (2)) mod 2 = 0 then
+                     -- Create a new cell
+                     Cell_Count := Cell_Count + 1;
+
+                     -- Extract 4x2 cell data
+                     for R in Rows loop
+                        for C in Cols loop
+                           declare
+                              Matrix_Row : constant Integer := Row_Start + (R - 1);
+                              Matrix_Col : constant Integer := Col_Start + (C - 1);
+                           begin
+                              if Matrix_Row in M'Range (1) and Matrix_Col in M'Range (2) then
+                                 Cell_M (R, C) := M (Matrix_Row, Matrix_Col);
+                              else
+                                 Cell_M (R, C) := False;
+                              end if;
+                           end;
+                        end loop;
+                     end loop;
+
+                     -- Convert cell to Braille character
+                     Current_Line (Cell_Count) := Cell (Cell_M);
+                  end if;
+               end loop;
+
+               -- Append the completed line to result
+               if Cell_Count > 0 then
+                  Result.Append (Current_Line (1 .. Cell_Count));
+               end if;
+            end;
+         end if;
+      end loop;
+
+      return Result;
+   end Canvas;
 
 end Braillart;
