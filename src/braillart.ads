@@ -19,6 +19,17 @@ package Braillart with Preelaborate is
    subtype BString is UString with
      Predicate => (for all C of BString => C in BChar);
 
+   --  Straight counting, using Braille dots from top-left in row-first order
+
+   subtype BCount is Natural range 0 .. 255;
+
+   function Value (Pos : BCount) return BChar;
+   --  Note that this is not the Unicode code-point order! This returns the
+   --  patterns in the order of Patterns at the end of this package. (What
+   --  would be the "natural" order for a 4x2 matrix.)
+
+   --  A single cell given as a matrix
+
    subtype Rows is Positive range 1 .. 4;
    subtype Cols is Positive range 1 .. 2;
 
