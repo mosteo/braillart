@@ -10,10 +10,11 @@ package Braillart with Preelaborate is
    --  Braille Character:
    subtype BChar is UChar range UChar'Val (16#2800#) .. UChar'Val (16#28FF#);
    --  Braille patterns are like a binary counter, growing in row-first order,
-   --  from the top-left. There are four rows and two columns in a cell. For
-   --  example, 16#2800# is empty '⠀', 16#2801# is one '⠁', 16#2802# is 2 '⠂',
-   --  16#2803# is 3 '⠃', 16#2848# is 9 '⡈'. there are, obviously, 2**8 values,
-   --  hence the range.
+   --  from the top-left. There is a catch in that a full 3x2 matrix is filled
+   --  first, and the last row for a 4x2 matrix is filled next. Hence, values
+   --  1, 2, 4 grow with the Char values but then the sequence changes:
+   --  16#2800# = '⠀', 16#2801# = '⠁', 16#2802# = '⠂', 16#2803# = '⠃',
+   --  16#2804# = '⠄', but 16#2848# = '⡀', whereas 16#2808# = '⠈'.
 
    subtype BString is UString with
      Predicate => (for all C of BString => C in BChar);
