@@ -1,3 +1,7 @@
+with Ada.Unchecked_Conversion;
+
+with Interfaces;
+
 package body Braillart is
 
    --------------------------
@@ -48,22 +52,48 @@ package body Braillart is
       return Wide_Wide_Character'Val(Code_Value);
    end Dot;
 
-   ----------
-   -- Cell --
-   ----------
+   -------------------
+   -- Cell_Computed --
+   -------------------
 
-   function Cell (M : Cell_Matrix) return BChar is
+   function Cell_Computed (M : Cell_Matrix) return BChar is
       Result : Natural := BChar'Pos (BChar'First);
    begin
       for R in Rows loop
          for C in Cols loop
             if M (R, C) then
-               Result := Result + Get_Dot_Offset_Value(R, C);
+               Result := Result + Get_Dot_Offset_Value (R, C);
             end if;
          end loop;
       end loop;
 
-      return BChar'Val(Result);
+      return BChar'Val (Result);
+   end Cell_Computed;
+
+   Cached_Patterns : array (0 .. 255) of BChar :=
+                       (others => Patterns (Patterns'First));
+   --  This differs from Patterns in that we don't know the particular
+   --  order, which can change depending on whether the compiler uses row-
+   --  or column-major order.
+
+   ----------
+   -- Cell --
+   ----------
+
+   function Cell (M : Cell_Matrix) return BChar is
+      --  As BChar is likely larger than one byte, we need first a new type
+      type Offset is new Natural range 0 .. 255 with size => 8;
+      function Convert is new Ada.Unchecked_Conversion (Cell_Matrix, Offset);
+      Pos : constant Natural := Natural (Convert (M));
+   begin
+      if Pos = 0 then
+         return Patterns (Patterns'First);
+      elsif Cached_Patterns (Pos) = Patterns (Patterns'First) then
+         --  Lazy initialization
+         Cached_Patterns (Pos) := Cell_Computed (M);
+      end if;
+
+      return Cached_Patterns (Pos);
    end Cell;
 
    ---------------
