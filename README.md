@@ -18,11 +18,11 @@ See this falling sand demo:
 
 Usual terminal fonts do not show the unmarked dots, so the effect is better.
 
-You can run it yourself by entering the `demos/sand` directory and running
+You can run it yourself by running from the repository root
 (with [`alr`](https://github.com/alire-project/alire) in your path):
 
 ```bash
-$ alr run
+$ alr -C demos/sand run
 ```
 
 With [`ansiada`](https://github.com/mosteo/ansi-ada) and braillart you could
