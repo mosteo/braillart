@@ -14,15 +14,32 @@ package Braillart with Preelaborate is
    --  first, and the last row for a 4x2 matrix is filled next. Hence, values
    --  1, 2, 4 grow with the Char values but then the sequence changes:
    --  16#2800# = '⠀', 16#2801# = '⠁', 16#2802# = '⠂', 16#2803# = '⠃',
-   --  16#2804# = '⠄', but 16#2848# = '⡀', whereas 16#2808# = '⠈'.
+   --  16#2804# = '⠄', but 16#2848# = '⡀', whereas 16#2808# = '⠈'. This
+   --  makes not straightforward to apply 'Val. Instead, use Value below or the
+   --  Patterns array for such low-level manipulation (or any of the high-level
+   --  matrices below).
 
    subtype BString is UString with
      Predicate => (for all C of BString => C in BChar);
 
+   --  Straight counting, using Braille dots from top-left in row-first order
+
+   subtype BCount is Natural range 0 .. 255;
+
+   function Value (Pos : BCount) return BChar;
+   --  Note that this is not the Unicode code-point order! This returns the
+   --  patterns in the order of Patterns at the end of this package. (What
+   --  would be the "natural" order for a 4x2 matrix.)
+
+   --  A single cell given as a matrix
+
    subtype Rows is Positive range 1 .. 4;
    subtype Cols is Positive range 1 .. 2;
 
-   type Cell_Matrix is array (Rows, Cols) of Boolean;
+   type Cell_Matrix is array (Rows, Cols) of Boolean with
+     Component_Size => 1,
+     Size           => 8,
+     Convention     => Fortran;
 
    function Dot (R : Rows; C : Cols) return BChar;
 
@@ -51,5 +68,25 @@ package Braillart with Preelaborate is
    subtype Line_List is Line_Lists.List;
 
    function Canvas (M : Full_Matrix) return Line_List;
+
+   --  Patterns for the Braille characters
+
+   Patterns : constant array (BCount) of BChar :=
+     ('⠀', '⠁', '⠂', '⠃', '⠄', '⠅', '⠆', '⠇', '⡀', '⡁', '⡂', '⡃', '⡄', '⡅', '⡆', '⡇',
+      '⠈', '⠉', '⠊', '⠋', '⠌', '⠍', '⠎', '⠏', '⡈', '⡉', '⡊', '⡋', '⡌', '⡍', '⡎', '⡏',
+      '⠐', '⠑', '⠒', '⠓', '⠔', '⠕', '⠖', '⠗', '⡐', '⡑', '⡒', '⡓', '⡔', '⡕', '⡖', '⡗',
+      '⠘', '⠙', '⠚', '⠛', '⠜', '⠝', '⠞', '⠟', '⡘', '⡙', '⡚', '⡛', '⡜', '⡝', '⡞', '⡟',
+      '⠠', '⠡', '⠢', '⠣', '⠤', '⠥', '⠦', '⠧', '⡠', '⡡', '⡢', '⡣', '⡤', '⡥', '⡦', '⡧',
+      '⠨', '⠩', '⠪', '⠫', '⠬', '⠭', '⠮', '⠯', '⡨', '⡩', '⡪', '⡫', '⡬', '⡭', '⡮', '⡯',
+      '⠰', '⠱', '⠲', '⠳', '⠴', '⠵', '⠶', '⠷', '⡰', '⡱', '⡲', '⡳', '⡴', '⡵', '⡶', '⡷',
+      '⠸', '⠹', '⠺', '⠻', '⠼', '⠽', '⠾', '⠿', '⡸', '⡹', '⡺', '⡻', '⡼', '⡽', '⡾', '⡿',
+      '⢀', '⢁', '⢂', '⢃', '⢄', '⢅', '⢆', '⢇', '⣀', '⣁', '⣂', '⣃', '⣄', '⣅', '⣆', '⣇',
+      '⢈', '⢉', '⢊', '⢋', '⢌', '⢍', '⢎', '⢏', '⣈', '⣉', '⣊', '⣋', '⣌', '⣍', '⣎', '⣏',
+      '⢐', '⢑', '⢒', '⢓', '⢔', '⢕', '⢖', '⢗', '⣐', '⣑', '⣒', '⣓', '⣔', '⣕', '⣖', '⣗',
+      '⢘', '⢙', '⢚', '⢛', '⢜', '⢝', '⢞', '⢟', '⣘', '⣙', '⣚', '⣛', '⣜', '⣝', '⣞', '⣟',
+      '⢠', '⢡', '⢢', '⢣', '⢤', '⢥', '⢦', '⢧', '⣠', '⣡', '⣢', '⣣', '⣤', '⣥', '⣦', '⣧',
+      '⢨', '⢩', '⢪', '⢫', '⢬', '⢭', '⢮', '⢯', '⣨', '⣩', '⣪', '⣫', '⣬', '⣭', '⣮', '⣯',
+      '⢰', '⢱', '⢲', '⢳', '⢴', '⢵', '⢶', '⢷', '⣰', '⣱', '⣲', '⣳', '⣴', '⣵', '⣶', '⣷',
+      '⢸', '⢹', '⢺', '⢻', '⢼', '⢽', '⢾', '⢿', '⣸', '⣹', '⣺', '⣻', '⣼', '⣽', '⣾', '⣿');
 
 end Braillart;

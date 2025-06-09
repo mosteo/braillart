@@ -1,3 +1,7 @@
+with Ada.Unchecked_Conversion;
+
+with Interfaces;
+
 package body Braillart is
 
    --------------------------
@@ -48,22 +52,48 @@ package body Braillart is
       return Wide_Wide_Character'Val(Code_Value);
    end Dot;
 
-   ----------
-   -- Cell --
-   ----------
+   -------------------
+   -- Cell_Computed --
+   -------------------
 
-   function Cell (M : Cell_Matrix) return BChar is
+   function Cell_Computed (M : Cell_Matrix) return BChar is
       Result : Natural := BChar'Pos (BChar'First);
    begin
       for R in Rows loop
          for C in Cols loop
             if M (R, C) then
-               Result := Result + Get_Dot_Offset_Value(R, C);
+               Result := Result + Get_Dot_Offset_Value (R, C);
             end if;
          end loop;
       end loop;
 
-      return BChar'Val(Result);
+      return BChar'Val (Result);
+   end Cell_Computed;
+
+   Cached_Patterns : array (0 .. 255) of BChar :=
+                       (others => Patterns (Patterns'First));
+   --  This differs from Patterns in that we don't know the particular
+   --  order, which can change depending on whether the compiler uses row-
+   --  or column-major order.
+
+   ----------
+   -- Cell --
+   ----------
+
+   function Cell (M : Cell_Matrix) return BChar is
+      --  As BChar is likely larger than one byte, we need first a new type
+      type Offset is new Natural range 0 .. 255 with size => 8;
+      function Convert is new Ada.Unchecked_Conversion (Cell_Matrix, Offset);
+      Pos : constant Natural := Natural (Convert (M));
+   begin
+      if Pos = 0 then
+         return Patterns (Patterns'First);
+      elsif Cached_Patterns (Pos) = Patterns (Patterns'First) then
+         --  Lazy initialization
+         Cached_Patterns (Pos) := Cell_Computed (M);
+      end if;
+
+      return Cached_Patterns (Pos);
    end Cell;
 
    ---------------
@@ -169,5 +199,27 @@ package body Braillart is
 
       return Result;
    end Canvas;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Pos : BCount) return BChar is
+      use Interfaces;
+
+      -- Mapping from row-first bit position to Unicode bit position
+      -- Row-first: 0,1,2,3,4,5,6,7 -> Unicode: 0,1,2,6,3,4,5,7
+      Bit_Map : constant array (0 .. 7) of Natural := (0, 1, 2, 6, 3, 4, 5, 7);
+      Code_Value : Natural := 0;
+      Input_Bits : constant Unsigned_8 := Unsigned_8 (Pos);
+   begin
+      for I in Bit_Map'Range loop
+         if (Input_Bits and 2**I) /= 0 then
+            Code_Value := Code_Value + 2**Bit_Map(I);
+         end if;
+      end loop;
+
+      return BChar'Val (BChar'Pos (BChar'First) + Code_Value);
+   end Value;
 
 end Braillart;
