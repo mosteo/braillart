@@ -16,6 +16,8 @@ See this falling sand demo:
 
 ![Sand Demo](demos/sand/sand.gif)
 
+Usual terminal fonts do not show the unmarked dots, so the effect is better.
+
 You can run it yourself by entering the `demos/sand` directory and running
 (with [`alr`](https://github.com/alire-project/alire) in your path):
 
@@ -31,4 +33,4 @@ And since with ANSI you are limited to one color per character, you enter kinda
 into ZX Spectrum territory, where colors were likewise applied to pixel blocks
 rather than in individual pixels.
 
-(Not that this is in any way efficient.)
+(Not that this is in any way efficient. I don't really know. Maybe it is.)
