@@ -1,0 +1,23 @@
+name = "sand"
+description = ""
+version = "0.1.0-dev"
+
+authors = ["Your Name"]
+maintainers = ["Your Name <example@example.com>"]
+licenses = "MIT OR Apache-2.0 WITH LLVM-exception"
+website = ""
+tags = []
+
+executables = ["sand"]
+
+[test]
+runner = "alire"
+
+[[depends-on]]
+braillart = "~0.1.0-dev"
+
+[[pins]]
+braillart = { path='../..' }
+
+[[depends-on]]
+ansiada = "^1.1.0"
