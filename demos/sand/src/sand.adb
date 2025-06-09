@@ -6,6 +6,9 @@ with Ada.Containers.Vectors;
 with Braillart;
 with AnsiAda;
 
+--  Created with Cline and Claude 4 Sonnet and my mushy brain when the machine
+--  got stuck.
+
 procedure Sand is
    use Ada.Text_IO;
    use Ada.Real_Time;
@@ -15,10 +18,10 @@ procedure Sand is
    package WWIO renames Ada.Wide_Wide_Text_IO;
 
    -- Configuration constants
-   CANVAS_WIDTH  : constant := 10;  -- Terminal width in characters
+   CANVAS_WIDTH  : constant := 20;  -- Terminal width in characters
    CANVAS_HEIGHT : constant := 10;  -- Terminal height in characters
    ANIMATION_PERIOD : constant := 50; -- Milliseconds between frames
-   GRAVITY_STRENGTH : constant := 0.03; -- Downward acceleration
+   GRAVITY_STRENGTH : constant := 0.05; -- Downward acceleration
    LATERAL_DRIFT_MAX : constant := 0.1; -- Maximum horizontal drift
    SPAWN_RATE : constant := 1; -- New particles per frame
    SLIDE_DISTANCE : constant := 1.0; -- How far particles can slide laterally
@@ -43,7 +46,7 @@ procedure Sand is
 
    -- Global state
    Particles : Vector;
-   Canvas_Grid : Full_Matrix (1 .. BRAILLE_HEIGHT, 1 .. BRAILLE_WIDTH * 2);
+   Canvas_Grid : Full_Matrix (1 .. BRAILLE_HEIGHT, 1 .. BRAILLE_WIDTH);
    Random_Gen : Ada.Numerics.Float_Random.Generator;
    Frame_Count : Natural := 0;
 
@@ -53,6 +56,25 @@ procedure Sand is
       Ada.Numerics.Float_Random.Reset (Random_Gen);
       Canvas_Grid := (others => (others => False));
 
+      -- Create U-shaped container walls
+      -- Left wall (first two columns)
+      for Row in Canvas_Grid'Range (1) loop
+         Canvas_Grid (Row, 1) := True;
+         Canvas_Grid (Row, 2) := True;
+      end loop;
+
+      -- Right wall (last two columns)
+      for Row in Canvas_Grid'Range (1) loop
+         Canvas_Grid (Row, BRAILLE_WIDTH - 1) := True;
+         Canvas_Grid (Row, BRAILLE_WIDTH) := True;
+      end loop;
+
+      -- Bottom wall (last two rows)
+      for Col in Canvas_Grid'Range (2) loop
+         Canvas_Grid (BRAILLE_HEIGHT - 1, Col) := True;
+         Canvas_Grid (BRAILLE_HEIGHT, Col) := True;
+      end loop;
+
       -- Hide cursor and clear screen
       Put (Hide & Clear_Screen & Position (1, 1));
    end Initialize;
@@ -60,7 +82,7 @@ procedure Sand is
    -- Spawn new sand particles at the top center
    procedure Spawn_Particles is
       use Ada.Numerics.Float_Random;
-      Center_X : constant Float := Float (BRAILLE_WIDTH);
+      Center_X : constant Float := Float (BRAILLE_WIDTH) / 2.0;
    begin
       for I in 1 .. SPAWN_RATE loop
          declare
@@ -69,7 +91,7 @@ procedure Sand is
             Spawn_X : constant Float := Center_X + (Random (Random_Gen) - 0.5) * 4.0;
          begin
             New_Particle.X := Spawn_X;
-            New_Particle.Y := 1.0;
+            New_Particle.Y := 0.5;  -- Start just above the first row
             New_Particle.VX := (Random (Random_Gen) - 0.5) * LATERAL_DRIFT_MAX;
             New_Particle.VY := 0.0;
             New_Particle.Active := True;
@@ -96,7 +118,7 @@ procedure Sand is
 
    -- Check if the spawn area is blocked (preventing new particles)
    function Is_Spawn_Area_Blocked return Boolean is
-      Center_X : constant Float := Float (BRAILLE_WIDTH);
+      Center_X : constant Float := Float (BRAILLE_WIDTH) / 2.0;
    begin
       -- Check if any position in the spawn area is available
       for Offset in -2 .. 2 loop
@@ -312,12 +334,13 @@ procedure Sand is
    -- Cleanup
    procedure Finalize is
    begin
-      Put (Show & Clear_Screen & Position (1, 1));
+      Put (Show & Ansiada.Reset);
    end Finalize;
 
 begin
    Initialize;
    Run_Animation;
+   Finalize;
 exception
    when others =>
       Finalize;
