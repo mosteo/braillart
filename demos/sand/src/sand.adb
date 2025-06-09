@@ -15,18 +15,17 @@ procedure Sand is
    package WWIO renames Ada.Wide_Wide_Text_IO;
 
    -- Configuration constants
-   CANVAS_WIDTH  : constant := 80;  -- Terminal width in characters
+   CANVAS_WIDTH  : constant := 40;  -- Terminal width in characters
    CANVAS_HEIGHT : constant := 24;  -- Terminal height in characters
    ANIMATION_PERIOD : constant := 50; -- Milliseconds between frames
-   GRAVITY_STRENGTH : constant := 0.3; -- Downward acceleration
+   GRAVITY_STRENGTH : constant := 0.03; -- Downward acceleration
    LATERAL_DRIFT_MAX : constant := 0.1; -- Maximum horizontal drift
    SPAWN_RATE : constant := 3; -- New particles per frame
 
    -- Convert terminal dimensions to Braillart coordinates
    -- Each Braillart character represents a 4x2 dot matrix
-   -- Canvas function expects dimensions that are multiples of 4 rows and 2 columns
-   BRAILLE_WIDTH  : constant := CANVAS_WIDTH * 2;  -- 2 dots per character width
-   BRAILLE_HEIGHT : constant := CANVAS_HEIGHT * 4; -- 4 dots per character height
+   BRAILLE_WIDTH  : constant := CANVAS_WIDTH * 2;
+   BRAILLE_HEIGHT : constant := CANVAS_HEIGHT * 4;
 
    -- Sand particle representation
    type Sand_Particle is record
@@ -96,6 +95,7 @@ procedure Sand is
    procedure Update_Particle (P : in out Sand_Particle) is
       use Ada.Numerics.Float_Random;
       New_X, New_Y : Float;
+      Settle_Y : Float;
    begin
       if not P.Active then
          return;
@@ -118,13 +118,49 @@ procedure Sand is
 
       -- Check for collision downward
       if Is_Blocked (New_X, New_Y) then
-         -- Try to slide left or right
-         if not Is_Blocked (P.X - 1.0, New_Y) and Random (Random_Gen) > 0.5 then
-            New_X := P.X - 1.0;
-         elsif not Is_Blocked (P.X + 1.0, New_Y) then
-            New_X := P.X + 1.0;
-         else
-            -- Can't move, settle the particle
+         -- Find the settling position by going down until we hit something
+         Settle_Y := P.Y;
+         while Settle_Y < Float (BRAILLE_HEIGHT) and then not Is_Blocked (New_X, Settle_Y + 1.0) loop
+            Settle_Y := Settle_Y + 1.0;
+         end loop;
+
+         -- Try to slide left or right if we can't settle straight down
+         if Settle_Y = P.Y then
+            if not Is_Blocked (P.X - 1.0, Settle_Y + 1.0) and Random (Random_Gen) > 0.5 then
+               New_X := P.X - 1.0;
+               -- Find settling position for left slide
+               while Settle_Y < Float (BRAILLE_HEIGHT) and then not Is_Blocked (New_X, Settle_Y + 1.0) loop
+                  Settle_Y := Settle_Y + 1.0;
+               end loop;
+            elsif not Is_Blocked (P.X + 1.0, Settle_Y + 1.0) then
+               New_X := P.X + 1.0;
+               -- Find settling position for right slide
+               while Settle_Y < Float (BRAILLE_HEIGHT) and then not Is_Blocked (New_X, Settle_Y + 1.0) loop
+                  Settle_Y := Settle_Y + 1.0;
+               end loop;
+            else
+               -- Can't move anywhere, settle at current position
+               P.Active := False;
+               declare
+                  Grid_X : constant Integer := Integer (P.X + 0.5);
+                  Grid_Y : constant Integer := Integer (P.Y + 0.5);
+               begin
+                  if Grid_X in Canvas_Grid'Range (2) and Grid_Y in Canvas_Grid'Range (1) then
+                     Canvas_Grid (Grid_Y, Grid_X) := True;
+                  end if;
+               end;
+               return;
+            end if;
+         end if;
+
+         -- If we found a better settling position, move there
+         if Settle_Y > P.Y then
+            P.X := New_X;
+            P.Y := Settle_Y;
+         end if;
+
+         -- If we hit the bottom or can't fall further, settle
+         if Settle_Y >= Float (BRAILLE_HEIGHT) - 1.0 or Is_Blocked (New_X, Settle_Y + 1.0) then
             P.Active := False;
             declare
                Grid_X : constant Integer := Integer (P.X + 0.5);
@@ -136,11 +172,11 @@ procedure Sand is
             end;
             return;
          end if;
+      else
+         -- No collision, update position normally
+         P.X := New_X;
+         P.Y := New_Y;
       end if;
-
-      -- Update position
-      P.X := New_X;
-      P.Y := New_Y;
 
       -- Remove particles that fall off screen
       if P.Y > Float (BRAILLE_HEIGHT) then
