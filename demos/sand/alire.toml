@@ -1,23 +1,18 @@
 name = "sand"
-description = ""
+description = "Falling sand simulation using Braillart"
 version = "0.1.0-dev"
 
-authors = ["Your Name"]
-maintainers = ["Your Name <example@example.com>"]
+authors = ["Alejandro R. Mosteo"]
+maintainers = ["alejandro@mosteo.com"]
 licenses = "MIT OR Apache-2.0 WITH LLVM-exception"
 website = ""
-tags = []
+tags = ["demo", "sand", "simulation", "braille", "art"]
 
 executables = ["sand"]
 
-[test]
-runner = "alire"
-
 [[depends-on]]
-braillart = "~0.1.0-dev"
+ansiada = "^1.1.0"
+braillart = "*"
 
 [[pins]]
 braillart = { path='../..' }
-
-[[depends-on]]
-ansiada = "^1.1.0"
