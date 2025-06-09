@@ -15,13 +15,13 @@ procedure Sand is
    package WWIO renames Ada.Wide_Wide_Text_IO;
 
    -- Configuration constants
-   CANVAS_WIDTH  : constant := 40;  -- Terminal width in characters
-   CANVAS_HEIGHT : constant := 24;  -- Terminal height in characters
-   ANIMATION_PERIOD : constant := 25; -- Milliseconds between frames
+   CANVAS_WIDTH  : constant := 10;  -- Terminal width in characters
+   CANVAS_HEIGHT : constant := 10;  -- Terminal height in characters
+   ANIMATION_PERIOD : constant := 50; -- Milliseconds between frames
    GRAVITY_STRENGTH : constant := 0.03; -- Downward acceleration
    LATERAL_DRIFT_MAX : constant := 0.1; -- Maximum horizontal drift
    SPAWN_RATE : constant := 1; -- New particles per frame
-   SLIDE_DISTANCE : constant := 2.0; -- How far particles can slide laterally
+   SLIDE_DISTANCE : constant := 1.0; -- How far particles can slide laterally
 
    -- Convert terminal dimensions to Braillart coordinates
    -- Each Braillart character represents a 4x2 dot matrix
@@ -94,6 +94,63 @@ procedure Sand is
       return Canvas_Grid (Grid_Y, Grid_X);
    end Is_Blocked;
 
+   -- Check if the spawn area is blocked (preventing new particles)
+   function Is_Spawn_Area_Blocked return Boolean is
+      Center_X : constant Float := Float (BRAILLE_WIDTH);
+   begin
+      -- Check if any position in the spawn area is available
+      for Offset in -2 .. 2 loop
+         declare
+            Check_X : constant Float := Center_X + Float (Offset);
+            Check_Y : constant Float := 1.0;
+         begin
+            if not Is_Blocked (Check_X, Check_Y) then
+               return False; -- Found available space
+            end if;
+         end;
+      end loop;
+      return True; -- All spawn positions are blocked
+   end Is_Spawn_Area_Blocked;
+
+   -- Check if all particles have settled (no active particles)
+   function All_Particles_Settled return Boolean is
+   begin
+      for P of Particles loop
+         if P.Active then
+            return False;
+         end if;
+      end loop;
+      return True;
+   end All_Particles_Settled;
+
+   -- Check if simulation should terminate (all particles blocked)
+   function Should_Terminate return Boolean is
+   begin
+      return Is_Spawn_Area_Blocked and All_Particles_Settled;
+   end Should_Terminate;
+
+   -- Find the lowest possible settling position for a particle at given X coordinate
+   function Find_Settle_Position (X, Start_Y : Float) return Float is
+      Settle_Y : Float := Start_Y;
+   begin
+      -- Find the lowest available position
+      while Settle_Y < Float (BRAILLE_HEIGHT) - 1.0 and then not Is_Blocked (X, Settle_Y + 1.0) loop
+         Settle_Y := Settle_Y + 1.0;
+      end loop;
+      return Settle_Y;
+   end Find_Settle_Position;
+
+   -- Settle a particle at its current position
+   procedure Settle_Particle (P : in out Sand_Particle) is
+      Grid_X : constant Integer := Integer (P.X + 0.5);
+      Grid_Y : constant Integer := Integer (P.Y + 0.5);
+   begin
+      P.Active := False;
+      if Grid_X in Canvas_Grid'Range (2) and Grid_Y in Canvas_Grid'Range (1) then
+         Canvas_Grid (Grid_Y, Grid_X) := True;
+      end if;
+   end Settle_Particle;
+
    -- Update a single particle's physics
    procedure Update_Particle (P : in out Sand_Particle) is
       use Ada.Numerics.Float_Random;
@@ -149,44 +206,22 @@ procedure Sand is
                   P.X := New_X;
                   P.Y := New_Y;
                else
-                  -- Can't slide either, try to settle
-                  declare
-                     Settle_Y : Float := P.Y;
-                  begin
-                     -- Find the lowest available position
-                     while Settle_Y < Float (BRAILLE_HEIGHT) - 1.0 and then not Is_Blocked (P.X, Settle_Y + 1.0) loop
-                        Settle_Y := Settle_Y + 1.0;
-                     end loop;
-
-                     if Settle_Y > P.Y then
-                        -- Can fall further
-                        P.Y := Settle_Y;
-                     else
-                        -- Can't fall or slide, settle particle
-                        P.Active := False;
-                        declare
-                           Grid_X : constant Integer := Integer (P.X + 0.5);
-                           Grid_Y : constant Integer := Integer (P.Y + 0.5);
-                        begin
-                           if Grid_X in Canvas_Grid'Range (2) and Grid_Y in Canvas_Grid'Range (1) then
-                              Canvas_Grid (Grid_Y, Grid_X) := True;
-                           end if;
-                        end;
-                        return;
-                     end if;
-                  end;
+                  -- Can't slide either, find the lowest possible position and settle
+                  Settle_Y := Find_Settle_Position (P.X, P.Y);
+                  if Settle_Y > P.Y then
+                     -- Can fall further
+                     P.Y := Settle_Y;
+                  else
+                     -- Can't fall or slide, settle particle at lowest possible position
+                     P.Y := Find_Settle_Position (P.X, P.Y);
+                     Settle_Particle (P);
+                     return;
+                  end if;
                end if;
             else
-               -- No sliding possible, settle particle
-               P.Active := False;
-               declare
-                  Grid_X : constant Integer := Integer (P.X + 0.5);
-                  Grid_Y : constant Integer := Integer (P.Y + 0.5);
-               begin
-                  if Grid_X in Canvas_Grid'Range (2) and Grid_Y in Canvas_Grid'Range (1) then
-                     Canvas_Grid (Grid_Y, Grid_X) := True;
-                  end if;
-               end;
+               -- No sliding possible, settle particle at lowest possible position
+               P.Y := Find_Settle_Position (P.X, P.Y);
+               Settle_Particle (P);
                return;
             end if;
          end;
@@ -256,6 +291,11 @@ procedure Sand is
       Period : constant Time_Span := Milliseconds (ANIMATION_PERIOD);
    begin
       loop
+         -- Check termination condition before spawning new particles
+         if Should_Terminate then
+            exit;
+         end if;
+
          -- Update simulation
          Spawn_Particles;
          Update_All_Particles;
@@ -266,9 +306,6 @@ procedure Sand is
          -- Wait for next frame
          Next_Frame := Next_Frame + Period;
          delay until Next_Frame;
-
-         -- Exit condition (for now, run indefinitely)
-         -- Could add keyboard input handling here
       end loop;
    end Run_Animation;
 
