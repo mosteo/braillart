@@ -17,10 +17,11 @@ procedure Sand is
    -- Configuration constants
    CANVAS_WIDTH  : constant := 40;  -- Terminal width in characters
    CANVAS_HEIGHT : constant := 24;  -- Terminal height in characters
-   ANIMATION_PERIOD : constant := 50; -- Milliseconds between frames
+   ANIMATION_PERIOD : constant := 25; -- Milliseconds between frames
    GRAVITY_STRENGTH : constant := 0.03; -- Downward acceleration
    LATERAL_DRIFT_MAX : constant := 0.1; -- Maximum horizontal drift
-   SPAWN_RATE : constant := 3; -- New particles per frame
+   SPAWN_RATE : constant := 1; -- New particles per frame
+   SLIDE_DISTANCE : constant := 2.0; -- How far particles can slide laterally
 
    -- Convert terminal dimensions to Braillart coordinates
    -- Each Braillart character represents a 4x2 dot matrix
@@ -56,14 +57,16 @@ procedure Sand is
       Put (Hide & Clear_Screen & Position (1, 1));
    end Initialize;
 
-   -- Spawn new sand particles at the top
+   -- Spawn new sand particles at the top center
    procedure Spawn_Particles is
       use Ada.Numerics.Float_Random;
+      Center_X : constant Float := Float (BRAILLE_WIDTH);
    begin
       for I in 1 .. SPAWN_RATE loop
          declare
             New_Particle : Sand_Particle;
-            Spawn_X : constant Float := Random (Random_Gen) * Float (BRAILLE_WIDTH * 2 - 4) + 2.0;
+            -- Spawn near center with small random offset
+            Spawn_X : constant Float := Center_X + (Random (Random_Gen) - 0.5) * 4.0;
          begin
             New_Particle.X := Spawn_X;
             New_Particle.Y := 1.0;
@@ -116,30 +119,65 @@ procedure Sand is
       New_X := P.X + P.VX;
       New_Y := P.Y + P.VY;
 
-      -- Check for collision downward
-      if Is_Blocked (New_X, New_Y) then
-         -- Find the settling position by going down until we hit something
-         Settle_Y := P.Y;
-         while Settle_Y < Float (BRAILLE_HEIGHT) and then not Is_Blocked (New_X, Settle_Y + 1.0) loop
-            Settle_Y := Settle_Y + 1.0;
-         end loop;
+      -- Check if we can move to the new position
+      if not Is_Blocked (New_X, New_Y) then
+         -- No collision, update position normally
+         P.X := New_X;
+         P.Y := New_Y;
+      else
+         -- Collision detected, try to slide laterally
+         declare
+            Can_Slide_Left  : constant Boolean := not Is_Blocked (P.X - SLIDE_DISTANCE, New_Y);
+            Can_Slide_Right : constant Boolean := not Is_Blocked (P.X + SLIDE_DISTANCE, New_Y);
+            Slide_Direction : Float := 0.0;
+         begin
+            -- Determine slide direction based on available space and randomness
+            if Can_Slide_Left and Can_Slide_Right then
+               -- Both directions available, choose randomly
+               Slide_Direction := (if Random (Random_Gen) > 0.5 then -SLIDE_DISTANCE else SLIDE_DISTANCE);
+            elsif Can_Slide_Left then
+               Slide_Direction := -SLIDE_DISTANCE;
+            elsif Can_Slide_Right then
+               Slide_Direction := SLIDE_DISTANCE;
+            end if;
 
-         -- Try to slide left or right if we can't settle straight down
-         if Settle_Y = P.Y then
-            if not Is_Blocked (P.X - 1.0, Settle_Y + 1.0) and Random (Random_Gen) > 0.5 then
-               New_X := P.X - 1.0;
-               -- Find settling position for left slide
-               while Settle_Y < Float (BRAILLE_HEIGHT) and then not Is_Blocked (New_X, Settle_Y + 1.0) loop
-                  Settle_Y := Settle_Y + 1.0;
-               end loop;
-            elsif not Is_Blocked (P.X + 1.0, Settle_Y + 1.0) then
-               New_X := P.X + 1.0;
-               -- Find settling position for right slide
-               while Settle_Y < Float (BRAILLE_HEIGHT) and then not Is_Blocked (New_X, Settle_Y + 1.0) loop
-                  Settle_Y := Settle_Y + 1.0;
-               end loop;
+            -- Apply sliding if possible
+            if Slide_Direction /= 0.0 then
+               New_X := P.X + Slide_Direction;
+               -- Check if we can move to the slid position
+               if not Is_Blocked (New_X, New_Y) then
+                  P.X := New_X;
+                  P.Y := New_Y;
+               else
+                  -- Can't slide either, try to settle
+                  declare
+                     Settle_Y : Float := P.Y;
+                  begin
+                     -- Find the lowest available position
+                     while Settle_Y < Float (BRAILLE_HEIGHT) - 1.0 and then not Is_Blocked (P.X, Settle_Y + 1.0) loop
+                        Settle_Y := Settle_Y + 1.0;
+                     end loop;
+
+                     if Settle_Y > P.Y then
+                        -- Can fall further
+                        P.Y := Settle_Y;
+                     else
+                        -- Can't fall or slide, settle particle
+                        P.Active := False;
+                        declare
+                           Grid_X : constant Integer := Integer (P.X + 0.5);
+                           Grid_Y : constant Integer := Integer (P.Y + 0.5);
+                        begin
+                           if Grid_X in Canvas_Grid'Range (2) and Grid_Y in Canvas_Grid'Range (1) then
+                              Canvas_Grid (Grid_Y, Grid_X) := True;
+                           end if;
+                        end;
+                        return;
+                     end if;
+                  end;
+               end if;
             else
-               -- Can't move anywhere, settle at current position
+               -- No sliding possible, settle particle
                P.Active := False;
                declare
                   Grid_X : constant Integer := Integer (P.X + 0.5);
@@ -151,31 +189,7 @@ procedure Sand is
                end;
                return;
             end if;
-         end if;
-
-         -- If we found a better settling position, move there
-         if Settle_Y > P.Y then
-            P.X := New_X;
-            P.Y := Settle_Y;
-         end if;
-
-         -- If we hit the bottom or can't fall further, settle
-         if Settle_Y >= Float (BRAILLE_HEIGHT) - 1.0 or Is_Blocked (New_X, Settle_Y + 1.0) then
-            P.Active := False;
-            declare
-               Grid_X : constant Integer := Integer (P.X + 0.5);
-               Grid_Y : constant Integer := Integer (P.Y + 0.5);
-            begin
-               if Grid_X in Canvas_Grid'Range (2) and Grid_Y in Canvas_Grid'Range (1) then
-                  Canvas_Grid (Grid_Y, Grid_X) := True;
-               end if;
-            end;
-            return;
-         end if;
-      else
-         -- No collision, update position normally
-         P.X := New_X;
-         P.Y := New_Y;
+         end;
       end if;
 
       -- Remove particles that fall off screen
